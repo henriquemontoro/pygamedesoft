@@ -137,7 +137,12 @@ class Player(pygame.sprite.Sprite):
                 self.rect.bottom  = hit.rect.top
                 self.vel_y        = 0
                 self.on_ground    = True
-                self._prev_jump   = False  # permite pular ao pousar com W já pressionado
+                self._prev_jump   = False
+                # Plataformas móveis: arrasta o player horizontalmente
+                if hasattr(hit, 'dx') and hit.dx:
+                    self.rect.x += hit.dx
+                    if self.rect.left  < 0:     self.rect.left  = 0
+                    if self.rect.right > WIDTH: self.rect.right = WIDTH
 
         # ── Movimento horizontal ─────────────────────────────────────────
         self.rect.x += self.vel_x
@@ -170,6 +175,39 @@ class Platform(pygame.sprite.Sprite):
         self.rect.y = y
 
 
+class MovingPlatform(Platform):
+    """Plataforma que oscila horizontalmente ou verticalmente entre dois pontos."""
+
+    def __init__(self, x, y, width, *, end_x=None, end_y=None, speed=2, color=CINZA):
+        super().__init__(x, y, width, color)
+        self.start_x = x
+        self.start_y = y
+        self.end_x   = x if end_x is None else end_x
+        self.end_y   = y if end_y is None else end_y
+        self.speed   = speed
+        self._dir    = 1
+        self.dx      = 0   # deslocamento horizontal neste frame (para arrastar o player)
+
+    def update(self):
+        old_x = self.rect.x
+
+        if self.end_x != self.start_x:
+            self.rect.x += self.speed * self._dir
+            if self._dir == 1 and self.rect.x >= self.end_x:
+                self.rect.x = self.end_x;  self._dir = -1
+            elif self._dir == -1 and self.rect.x <= self.start_x:
+                self.rect.x = self.start_x; self._dir = 1
+
+        if self.end_y != self.start_y:
+            self.rect.y += self.speed * self._dir
+            if self._dir == 1 and self.rect.y >= self.end_y:
+                self.rect.y = self.end_y;  self._dir = -1
+            elif self._dir == -1 and self.rect.y <= self.start_y:
+                self.rect.y = self.start_y; self._dir = 1
+
+        self.dx = self.rect.x - old_x
+
+
 class Bridge(Platform):
     """Ponte deslizante ativada por uma alavanca."""
     SPEED = 12
@@ -195,6 +233,35 @@ class Bridge(Platform):
             self.rect.x = min(self.rect.x + self.SPEED, self._target_x)
         elif self.rect.x > self._target_x:
             self.rect.x = max(self.rect.x - self.SPEED, self._target_x)
+
+
+class VerticalBridge(Platform):
+    """Plataforma que desliza verticalmente ao ser ativada por alavanca.
+    Cria um degrau/elevador quando acionada."""
+    SPEED = 8
+
+    def __init__(self, x, y_closed, y_open, width):
+        color = (130, 85, 35)
+        super().__init__(x, y_closed, width, color)
+        # Linhas horizontais indicam movimento vertical
+        for iy in range(3, PLATFORM_HEIGHT - 2, 4):
+            pygame.draw.line(self.image, (200, 160, 80), (4, iy), (width - 4, iy), 1)
+        # Setas apontando para cima
+        cx = width // 2
+        pygame.draw.polygon(self.image, (220, 190, 90),
+                            [(cx, 1), (cx - 5, 8), (cx + 5, 8)])
+        self.y_closed  = y_closed
+        self.y_open    = y_open
+        self._target_y = y_closed
+
+    def activate(self, state):
+        self._target_y = self.y_open if state else self.y_closed
+
+    def update(self):
+        if self.rect.y < self._target_y:
+            self.rect.y = min(self.rect.y + self.SPEED, self._target_y)
+        elif self.rect.y > self._target_y:
+            self.rect.y = max(self.rect.y - self.SPEED, self._target_y)
 
 
 class WaterPool(pygame.sprite.Sprite):
@@ -271,6 +338,44 @@ class LavaPool(pygame.sprite.Sprite):
                 pygame.draw.circle(surf, (255, 200, 30), (bx, by), 2)
         # Brilho no topo
         pygame.draw.line(surf, (255, 220, 60), (0, 0), (w, 0), 2)
+
+    def update(self):
+        self._tick += 1
+        if self._tick % 3 == 0:
+            self._draw()
+
+
+class GreenPool(pygame.sprite.Sprite):
+    """Piscina de ácido verde — mata AMBOS os jogadores."""
+
+    def __init__(self, x, y, width):
+        pygame.sprite.Sprite.__init__(self)
+        self._width = width
+        self._tick  = 0
+        self.image  = pygame.Surface((width, POOL_HEIGHT))
+        self._draw()
+        self.rect   = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
+    def _draw(self):
+        w, h = self._width, POOL_HEIGHT
+        surf = self.image
+        for y in range(h):
+            t = y / max(1, h - 1)
+            pygame.draw.line(surf,
+                             (int(10 + t * 15), int(165 - t * 55), int(10 + t * 15)),
+                             (0, y), (w, y))
+        off = self._tick % 20
+        for x0 in range(-20, w + 20, 20):
+            x1 = x0 + off
+            pygame.draw.arc(surf, (90, 240, 90), (x1, 0, 14, 6), 0, math.pi, 2)
+        for i, bx in enumerate(range(15, w - 15, 28)):
+            phase = (self._tick + i * 11) % 20
+            by = h - 2 - int(phase * (h - 4) / 20)
+            if 1 < by < h:
+                pygame.draw.circle(surf, (160, 255, 80), (bx, by), 2)
+        pygame.draw.line(surf, (130, 255, 100), (0, 0), (w, 0), 2)
 
     def update(self):
         self._tick += 1

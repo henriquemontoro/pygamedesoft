@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -- coding: utf-8 --
 
 # Dados gerais do jogo
 WIDTH = 800  # Largura da tela
@@ -7,9 +7,10 @@ FPS = 30  # Frames por segundo
 TITULO = 'Fireboy and Watergirl'
 
 # Estados para controle do jogo
-INIT = 0
-GAME = 1
-QUIT = 2
+INIT         = 0
+GAME         = 1
+QUIT         = 2
+LEVEL_SELECT = 3
 
 # Cores RGB
 PRETO = (0, 0, 0)

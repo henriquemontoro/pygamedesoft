@@ -76,6 +76,92 @@ def make_forest_bg():
     return bg
 
 
+def make_cave_bg():
+    """Pré-renderiza o fundo de caverna."""
+    bg = pygame.Surface((WIDTH, HEIGHT))
+
+    # Gradiente escuro azul-roxo
+    for y in range(HEIGHT):
+        t = y / HEIGHT
+        pygame.draw.line(bg, (int(18 + t*20), int(12 + t*18), int(38 + t*22)), (0, y), (WIDTH, y))
+
+    # Blocos de pedra no fundo (textura de parede)
+    for row in range(0, HEIGHT, 32):
+        offset = 16 if (row // 32) % 2 else 0
+        for col in range(-offset, WIDTH + 32, 32):
+            shade = 28 + (col // 32 + row // 32) % 3 * 5
+            pygame.draw.rect(bg, (shade, shade - 5, shade + 8), (col + 1, row + 1, 30, 30))
+            pygame.draw.rect(bg, (20, 15, 35), (col, row, 32, 32), 1)
+
+    # Estalactites no teto
+    for sx in range(0, WIDTH + 40, 38):
+        h = int(30 + 20 * math.sin(sx * 0.07 + 0.8))
+        pygame.draw.polygon(bg, (45, 35, 65), [(sx, 0), (sx + 18, 0), (sx + 9, h)])
+        pygame.draw.polygon(bg, (60, 48, 80), [(sx + 4, 0), (sx + 14, 0), (sx + 9, h - 6)])
+
+    # Cristais bioluminescentes no chão da caverna
+    crystal_data = [(80, GROUND_Y - 20, (50, 200, 255)),
+                    (220, GROUND_Y - 18, (100, 255, 180)),
+                    (500, GROUND_Y - 22, (180, 120, 255)),
+                    (680, GROUND_Y - 19, (50, 220, 255)),
+                    (340, GROUND_Y - 16, (120, 255, 160))]
+    for cx, cy, cc in crystal_data:
+        # Brilho (glow simples)
+        for r in [18, 13, 8]:
+            glow = tuple(max(0, c // (r // 4 + 1)) for c in cc)
+            pygame.draw.circle(bg, glow, (cx, cy), r)
+        pygame.draw.circle(bg, cc, (cx, cy), 6)
+        # Pontas do cristal
+        pygame.draw.polygon(bg, cc, [(cx - 5, cy + 2), (cx + 5, cy + 2), (cx, cy - 18)])
+        pygame.draw.polygon(bg, cc, [(cx - 3, cy + 2), (cx + 3, cy + 2), (cx + 6, cy - 10)])
+
+    # Gotas d'água no teto
+    for dx in range(30, WIDTH, 90):
+        pygame.draw.circle(bg, (80, 130, 200), (dx, 5), 3)
+        pygame.draw.line(bg, (80, 130, 200), (dx, 8), (dx, 18), 1)
+
+    pygame.draw.rect(bg, (35, 28, 55), (0, GROUND_Y - 6, WIDTH, 6))
+    return bg
+
+
+def make_volcano_bg():
+    """Pré-renderiza o fundo de vulcão."""
+    bg = pygame.Surface((WIDTH, HEIGHT))
+
+    # Céu avermelhado com fumaça
+    for y in range(HEIGHT):
+        t = y / HEIGHT
+        pygame.draw.line(bg, (int(100 + t*60), int(20 + t*30), int(5 + t*8)), (0, y), (WIDTH, y))
+
+    # Silhuetas de vulcões ao fundo
+    for vx, vw, vh in [(110, 200, 210), (690, 220, 230), (400, 180, 195)]:
+        pts = [(vx - vw // 2, HEIGHT), (vx, HEIGHT - vh), (vx + vw // 2, HEIGHT)]
+        pygame.draw.polygon(bg, (55, 18, 8), pts)
+        # Cratera com lava brilhante
+        pygame.draw.ellipse(bg, (220, 70, 0), (vx - 22, HEIGHT - vh + 2, 44, 18))
+        pygame.draw.ellipse(bg, (255, 180, 30), (vx - 12, HEIGHT - vh + 5, 24, 10))
+        # Nuvens de fumaça
+        for fx, fy, fr in [(vx - 10, HEIGHT - vh - 25, 14),
+                           (vx + 5,  HEIGHT - vh - 38, 18),
+                           (vx - 20, HEIGHT - vh - 48, 12)]:
+            pygame.draw.circle(bg, (70, 28, 12), (fx, fy), fr)
+
+    # Riachos de lava nas laterais
+    for lx in [15, WIDTH - 15]:
+        for seg in range(60, HEIGHT - 80, 40):
+            pygame.draw.rect(bg, (180, 50, 0), (lx - 5, seg, 10, 36))
+            pygame.draw.rect(bg, (255, 130, 0), (lx - 2, seg + 5, 4, 24))
+
+    # Pedras vulcânicas em primeiro plano
+    for rx in range(0, WIDTH + 50, 55):
+        rh = int(18 + 10 * math.sin(rx * 0.09 + 2.1))
+        pygame.draw.polygon(bg, (60, 22, 10),
+                            [(rx, HEIGHT), (rx + 26, HEIGHT), (rx + 13, HEIGHT - rh)])
+
+    pygame.draw.rect(bg, (70, 25, 10), (0, GROUND_Y - 6, WIDTH, 6))
+    return bg
+
+
 def draw_timer_bars(window, buttons, doors, font):
     """Desenha barra de contagem regressiva acima de cada porta aberta."""
     for btn, door in zip(buttons, doors):
@@ -99,60 +185,86 @@ def draw_timer_bars(window, buttons, doors, font):
             window.blit(txt, (bx + bw // 2 - txt.get_width() // 2, by - 16))
 
 
-def draw_hud(window, font, elapsed_frames=0, gems_collected=0, total_gems=0):
+def draw_hud(window, font, font_timer, elapsed_frames=0, gems_collected=0, total_gems=0):
     ctrl = font.render(
-        'Fireboy: WASD  |  Watergirl: Setas  |  ESC: Menu', True, (220, 220, 220))
+        'Fireboy: WASD  |  Watergirl: Setas', True, (220, 220, 220))
     window.blit(ctrl, (10, 10))
 
-    # Cronômetro
+    # Cronômetro grande e centralizado
     secs = elapsed_frames // FPS
-    timer_txt = font.render(f'Tempo: {secs}s', True, AMARELO)
-    window.blit(timer_txt, (WIDTH - timer_txt.get_width() - 10, 10))
+    timer_txt = font_timer.render(f'{secs}s', True, AMARELO)
+    window.blit(timer_txt, timer_txt.get_rect(center=(WIDTH // 2, 24)))
 
     # Gemas coletadas
     gems_txt = font.render(f'Gemas: {gems_collected}/{total_gems}', True, (255, 215, 50))
-    window.blit(gems_txt, (WIDTH - gems_txt.get_width() - 10, 28))
+    window.blit(gems_txt, (WIDTH - gems_txt.get_width() - 10, 10))
 
     hint = font.render(
-        'Ative a alavanca → cruze a ponte → pressione os botoes juntos!',
+        'Alavanca abre a ponte  |  Pressione os botões juntos para abrir as portas!',
         True, (200, 220, 180))
     window.blit(hint, (WIDTH // 2 - hint.get_width() // 2, HEIGHT - 22))
 
 
-def draw_win_screen(window, font_big, font_small, tick, grade='C', elapsed_frames=0):
+def _draw_overlay_btn(window, text, cx, cy, font, mx, my, w=220, h=46):
+    rect = pygame.Rect(cx - w // 2, cy - h // 2, w, h)
+    hov  = rect.collidepoint(mx, my)
+    bg   = (80, 75, 110) if hov else (45, 42, 70)
+    bord = (230, 220, 255) if hov else (150, 140, 190)
+    pygame.draw.rect(window, bg,   rect, border_radius=10)
+    pygame.draw.rect(window, bord, rect, 2, border_radius=10)
+    surf = font.render(text, True, BRANCO)
+    window.blit(surf, surf.get_rect(center=rect.center))
+    return rect
+
+
+def draw_win_screen(window, font_big, font_small, tick, mx, my,
+                    grade='C', elapsed_frames=0):
+    """Retorna (btn_novamente, btn_menu)."""
     overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-    overlay.fill((0, 0, 0, 160))
+    overlay.fill((0, 0, 0, 170))
     window.blit(overlay, (0, 0))
 
     if (tick // 20) % 2 == 0:
-        txt = font_big.render('VOCES VENCERAM!', True, AMARELO)
-        window.blit(txt, txt.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 70)))
+        txt = font_big.render('VOCÊS VENCERAM!', True, AMARELO)
+        window.blit(txt, txt.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 90)))
 
     grade_colors = {'A': (255, 215, 0), 'B': (180, 180, 200), 'C': (180, 110, 40)}
-    grade_labels = {'A': 'NOTA A  — INCRIVEL!', 'B': 'NOTA B  — BOM!', 'C': 'NOTA C  — COMPLETADO!'}
+    grade_labels = {'A': 'NOTA A  —  INCRÍVEL!', 'B': 'NOTA B  —  BOM!',
+                    'C': 'NOTA C  —  COMPLETADO!'}
     gc = grade_colors.get(grade, BRANCO)
     gl = grade_labels.get(grade, f'NOTA {grade}')
     grade_txt = font_big.render(gl, True, gc)
-    window.blit(grade_txt, grade_txt.get_rect(center=(WIDTH // 2, HEIGHT // 2)))
+    window.blit(grade_txt, grade_txt.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 20)))
 
     secs = elapsed_frames // FPS
-    time_txt = font_small.render(f'Tempo: {secs}s', True, BRANCO)
-    window.blit(time_txt, time_txt.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 44)))
+    time_txt = font_small.render(f'Tempo: {secs}s', True, (210, 210, 210))
+    window.blit(time_txt, time_txt.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 28)))
 
-    sub = font_small.render(
-        'ESPACO para jogar novamente  |  ESC para sair', True, BRANCO)
-    window.blit(sub, sub.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 70)))
+    cy_btn = HEIGHT // 2 + 80
+    font_btn = pygame.font.SysFont(None, 30)
+    btn_novamente = _draw_overlay_btn(
+        window, 'JOGAR NOVAMENTE', WIDTH // 2 - 125, cy_btn, font_btn, mx, my, w=220, h=44)
+    btn_menu = _draw_overlay_btn(
+        window, 'SELECIONAR FASE', WIDTH // 2 + 125, cy_btn, font_btn, mx, my, w=220, h=44)
+    return btn_novamente, btn_menu
 
 
-def draw_gameover_screen(window, font_big, font_small, who_died):
+def draw_gameover_screen(window, font_big, font_small, who_died, mx, my):
+    """Retorna (btn_novamente, btn_menu)."""
     overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-    overlay.fill((0, 0, 0, 160))
+    overlay.fill((0, 0, 0, 170))
     window.blit(overlay, (0, 0))
+
     txt = font_big.render(f'{who_died} morreu!', True, VERMELHO)
-    window.blit(txt, txt.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 30)))
-    sub = font_small.render(
-        'ESPACO para tentar novamente  |  ESC para sair', True, BRANCO)
-    window.blit(sub, sub.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 30)))
+    window.blit(txt, txt.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 55)))
+
+    font_btn = pygame.font.SysFont(None, 30)
+    cy_btn = HEIGHT // 2 + 20
+    btn_novamente = _draw_overlay_btn(
+        window, 'TENTAR NOVAMENTE', WIDTH // 2 - 125, cy_btn, font_btn, mx, my, w=230, h=44)
+    btn_menu = _draw_overlay_btn(
+        window, 'SELECIONAR FASE', WIDTH // 2 + 125, cy_btn, font_btn, mx, my, w=220, h=44)
+    return btn_novamente, btn_menu
 
 
 def build_level():
@@ -253,20 +365,234 @@ def build_level():
             gems_group, total_gems)
 
 
-def game_screen(window):
+def build_level_2():
+    """Fase 2 — Caverna: lago de ácido domina o chão; jogadores cruzam para o lado oposto.
+
+    Chão: lago de ácido verde x=140-660 — subida imediata obrigatória.
+    Andar 1 (y=470): Left + plataforma móvel + Right.
+    Andar 2 (y=380): Left [alavanca] + Ponte → Right (maior, com perigos).
+    Andar 3 (y=290): Left3 | Center3 [botões / ácido entre eles] | Right3.
+    Portas: Watergirl à esquerda (y=230), Fireboy à direita (y=230).
+    Puzzle: Fireboy vem da esquerda, pressiona btn_red (abre porta da Watergirl à esquerda).
+            Watergirl vem da direita, pressiona btn_blue (abre porta do Fireboy à direita).
+            Depois ambos cruzam o ácido para entrar na porta do lado oposto.
+    """
+    all_sprites   = pygame.sprite.Group()
+    platforms     = pygame.sprite.Group()
+    water_pools   = pygame.sprite.Group()
+    lava_pools    = pygame.sprite.Group()
+    buttons_group = pygame.sprite.Group()
+    levers_group  = pygame.sprite.Group()
+    gems_group    = pygame.sprite.Group()
+
+    COR_CAVE = (50, 40, 75)
+    COR_DARK = (35, 28, 55)
+
+    def add_plat(x, y, w, color=COR_CAVE):
+        p = Platform(x, y, w, color)
+        platforms.add(p); all_sprites.add(p); return p
+
+    def add_water(x, y, w):
+        p = WaterPool(x, y, w); water_pools.add(p); all_sprites.add(p)
+
+    def add_lava(x, y, w):
+        p = LavaPool(x, y, w); lava_pools.add(p); all_sprites.add(p)
+
+    def add_green(x, y, w):
+        p = GreenPool(x, y, w)
+        water_pools.add(p); lava_pools.add(p); all_sprites.add(p)
+
+    def add_gem(x, y, color=(140, 220, 255)):
+        g = Gem(x, y, color); gems_group.add(g); all_sprites.add(g)
+
+    PH = POOL_HEIGHT
+
+    # ── Chão — lago de ácido verde domina o centro ────────────────────────
+    add_plat(0, GROUND_Y, WIDTH, COR_DARK)
+    add_green(140, GROUND_Y - PH, 520)   # ácido x=140-660
+
+    # ── Andar 1 (y=470) ───────────────────────────────────────────────────
+    add_plat(0, 470, 200, COR_CAVE)       # Left1
+    add_plat(610, 470, 190, COR_CAVE)     # Right1
+    add_lava(30, 470 - PH, 70)
+    add_gem(65, 470 - PH - 8, (255, 140, 100))
+    add_water(650, 470 - PH, 70)
+    add_gem(685, 470 - PH - 8)
+    mp1 = MovingPlatform(210, 470, 100, end_x=500, speed=2, color=(65, 52, 95))
+    platforms.add(mp1); all_sprites.add(mp1)
+    add_gem(355, 438)
+
+    # ── Andar 2 (y=380): Left2 [alavanca] + Ponte + Right2 ───────────────
+    add_plat(0, 380, 240, COR_CAVE)       # Left2
+    add_plat(455, 380, 345, COR_CAVE)     # Right2 (largo)
+    add_water(510, 380 - PH, 70)
+    add_green(630, 380 - PH, 70)
+    add_gem(110, 348)
+    add_gem(740, 348, (255, 140, 100))
+
+    bridge = Bridge(x_closed=-240, x_open=240, y=380, width=240)
+    platforms.add(bridge); all_sprites.add(bridge)
+    lever = Lever(x=192, y=338, linked_objects=[bridge])
+    levers_group.add(lever); all_sprites.add(lever)
+
+    # ── Andar 3 (y=290): Left3 | Center3 [botões] | Right3 ───────────────
+    add_plat(0, 290, 210, COR_CAVE)       # Left3
+    add_plat(260, 290, 280, COR_CAVE)     # Center3 (botões aqui)
+    add_plat(580, 290, 220, COR_CAVE)     # Right3
+    add_green(300, 290 - PH, 200)         # ácido largo entre botões (200px — intransponível)
+    add_gem(80, 258)
+    add_gem(700, 258, (255, 140, 100))
+
+    # Portas trocadas: Watergirl à esquerda, Fireboy à direita
+    door_water = Door(x=20,  y=230, color=(60, 60, 200), label='W')
+    door_fire  = Door(x=742, y=230, color=(200, 60, 60), label='F')
+    all_sprites.add(door_fire, door_water)
+
+    btn_red  = Button(x=262, y=274, color=(200, 80, 80), linked_doors=[door_water])
+    btn_blue = Button(x=502, y=274, color=(80, 80, 200), linked_doors=[door_fire])
+    buttons_group.add(btn_red, btn_blue); all_sprites.add(btn_red, btn_blue)
+
+    total_gems = len(gems_group)
+    return (all_sprites, platforms, water_pools, lava_pools,
+            buttons_group, levers_group,
+            door_fire, door_water, btn_red, btn_blue,
+            gems_group, total_gems)
+
+
+def build_level_3():
+    """Fase 3 — Vulcão: labirinto de corredores horizontais + ponte vertical.
+
+    Estrutura em 3 corredores (A, B, C) em vez de torre vertical.
+    Chão: quase inteiramente perigoso (lava + ácido + água).
+    Corredor A (y=470): dois lados + plataforma móvel obrigatória.
+    Corredor B (y=370): alavanca ativa Ponte horizontal E Ponte Vertical.
+      - Ponte: conecta B-Left a B-Right (gap intransponível sem ela).
+      - Ponte Vertical: sobe de y=370 para y=270 — cria acesso ao Corredor C.
+    Corredor C (y=270): botões separados por ácido; portas nos extremos.
+    Puzzle: mesma lógica de cruzamento — pressionar botão no lado oposto, depois ir à porta.
+    """
+    all_sprites   = pygame.sprite.Group()
+    platforms     = pygame.sprite.Group()
+    water_pools   = pygame.sprite.Group()
+    lava_pools    = pygame.sprite.Group()
+    buttons_group = pygame.sprite.Group()
+    levers_group  = pygame.sprite.Group()
+    gems_group    = pygame.sprite.Group()
+
+    COR_VOLC = (80, 35, 15)
+    COR_DARK = (65, 22, 8)
+
+    def add_plat(x, y, w, color=COR_VOLC):
+        p = Platform(x, y, w, color)
+        platforms.add(p); all_sprites.add(p); return p
+
+    def add_water(x, y, w):
+        p = WaterPool(x, y, w); water_pools.add(p); all_sprites.add(p)
+
+    def add_lava(x, y, w):
+        p = LavaPool(x, y, w); lava_pools.add(p); all_sprites.add(p)
+
+    def add_green(x, y, w):
+        p = GreenPool(x, y, w)
+        water_pools.add(p); lava_pools.add(p); all_sprites.add(p)
+
+    def add_gem(x, y, color=(255, 160, 50)):
+        g = Gem(x, y, color); gems_group.add(g); all_sprites.add(g)
+
+    PH = POOL_HEIGHT
+
+    # ── Chão — quase inteiramente perigoso ────────────────────────────────
+    add_plat(0, GROUND_Y, WIDTH, COR_DARK)
+    add_lava(70, GROUND_Y - PH, 240)      # x=70-310
+    add_green(310, GROUND_Y - PH, 230)    # x=310-540
+    add_water(540, GROUND_Y - PH, 190)    # x=540-730
+
+    # ── Corredor A (y=470): duas metades + plat. móvel obrigatória ────────
+    add_plat(0, 470, 250, COR_VOLC)       # A-Left
+    add_plat(500, 470, 300, COR_VOLC)     # A-Right
+    add_lava(30, 470 - PH, 90)
+    add_gem(75, 470 - PH - 8, (255, 120, 60))
+    add_water(670, 470 - PH, 80)
+    add_gem(710, 470 - PH - 8, (140, 220, 255))
+    mp1 = MovingPlatform(260, 470, 110, end_x=490, speed=3, color=(110, 45, 15))
+    platforms.add(mp1); all_sprites.add(mp1)
+    add_gem(350, 438, (255, 220, 80))
+
+    # ── Corredor B (y=370): alavanca ativa ponte + ponte vertical ─────────
+    add_plat(0, 370, 320, COR_VOLC)       # B-Left (x=0-320)
+    add_plat(540, 370, 260, COR_VOLC)     # B-Right (x=540-800)
+
+    # Ponte Vertical: sobe de B (y=370) ao Corredor C (y=270)
+    # Quando ativa, cria plataforma em y=270 → jogadores saltam do Corredor B para C
+    vbridge = VerticalBridge(x=110, y_closed=370, y_open=270, width=90)
+    platforms.add(vbridge); all_sprites.add(vbridge)
+
+    # Ponte horizontal: quando aberta abrange x=320-600 → conecta B-Left a B-Right
+    bridge = Bridge(x_closed=-320, x_open=320, y=370, width=280)
+    platforms.add(bridge); all_sprites.add(bridge)
+
+    lever = Lever(x=266, y=328, linked_objects=[bridge, vbridge])
+    levers_group.add(lever); all_sprites.add(lever)
+
+    add_lava(30, 370 - PH, 70)           # lava em B-Left (Fireboy passa)
+    add_green(560, 370 - PH, 80)         # ácido em B-Right (ambos evitam)
+    add_gem(150, 338)
+    add_gem(680, 338, (140, 220, 255))
+
+    # ── Corredor C (y=270): botões e portas ───────────────────────────────
+    add_plat(0, 270, 220, COR_VOLC)      # C-Left (VBridge chega aqui)
+    add_plat(280, 270, 270, COR_VOLC)    # C-Center (botões)
+    add_plat(610, 270, 190, COR_VOLC)    # C-Right
+
+    add_green(340, 270 - PH, 170)        # ácido largo entre botões (intransponível)
+    add_lava(30, 270 - PH, 70)           # C-Left (Fireboy passa)
+    add_water(640, 270 - PH, 70)         # C-Right (Watergirl passa)
+    add_gem(80, 238)
+    add_gem(720, 238, (140, 220, 255))
+
+    # Portas no topo de C-Left e C-Right
+    door_fire  = Door(x=20,  y=210, color=(200, 60, 60), label='F')
+    door_water = Door(x=750, y=210, color=(60, 60, 200), label='W')
+    all_sprites.add(door_fire, door_water)
+
+    # btn_red (x=288) à esquerda do ácido → Fireboy pressiona, abre porta da Watergirl (direita)
+    # btn_blue (x=508) à direita do ácido → Watergirl pressiona, abre porta do Fireboy (esquerda)
+    # Após pressionar: ambos cruzam C para entrar nas portas do lado oposto
+    btn_red  = Button(x=288, y=254, color=(200, 80, 80), linked_doors=[door_water])
+    btn_blue = Button(x=508, y=254, color=(80, 80, 200), linked_doors=[door_fire])
+    buttons_group.add(btn_red, btn_blue); all_sprites.add(btn_red, btn_blue)
+
+    total_gems = len(gems_group)
+    return (all_sprites, platforms, water_pools, lava_pools,
+            buttons_group, levers_group,
+            door_fire, door_water, btn_red, btn_blue,
+            gems_group, total_gems)
+
+
+
+_LEVEL_BUILDERS = {
+    1: (build_level,   make_forest_bg),
+    2: (build_level_2, make_cave_bg),
+    3: (build_level_3, make_volcano_bg),
+}
+
+
+def game_screen(window, level=1):
     clock = pygame.time.Clock()
 
     font_big   = pygame.font.SysFont(None, 64)
     font_small = pygame.font.SysFont(None, 28)
     font_hud   = pygame.font.SysFont(None, 22)
+    font_timer = pygame.font.SysFont(None, 48)
 
-    bg = make_forest_bg()
+    build_fn, bg_fn = _LEVEL_BUILDERS.get(level, _LEVEL_BUILDERS[1])
+    bg = bg_fn()
 
     def reset():
         (all_sprites, platforms, water_pools, lava_pools,
          buttons_group, levers_group,
          door_fire, door_water, btn_red, btn_blue,
-         gems_group, total_gems) = build_level()
+         gems_group, total_gems) = build_fn()
 
         fb_ctrl = {'left': pygame.K_a, 'right': pygame.K_d, 'jump': pygame.K_w}
         wg_ctrl = {'left': pygame.K_LEFT, 'right': pygame.K_RIGHT, 'jump': pygame.K_UP}
@@ -296,10 +622,28 @@ def game_screen(window):
     elapsed_frames = 0
     gems_collected = 0
     grade          = 'C'
+    overlay_btns   = (None, None)   # (btn_novamente, btn_menu)
+
+    def do_reset():
+        nonlocal game_state, tick, elapsed_frames, gems_collected, grade
+        nonlocal all_sprites, water_pools, lava_pools, buttons_group, levers_group
+        nonlocal door_fire, door_water, btn_red, btn_blue, fireboy, watergirl
+        nonlocal gems_group, total_gems
+        (all_sprites, water_pools, lava_pools,
+         buttons_group, levers_group,
+         door_fire, door_water, btn_red, btn_blue,
+         fireboy, watergirl,
+         gems_group, total_gems) = reset()
+        game_state     = 'playing'
+        tick           = 0
+        elapsed_frames = 0
+        gems_collected = 0
+        grade          = 'C'
 
     while state != QUIT:
         clock.tick(FPS)
         tick += 1
+        mx, my = pygame.mouse.get_pos()
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -307,25 +651,21 @@ def game_screen(window):
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    state = INIT
-                if event.key == pygame.K_SPACE:
-                    if game_state in ('win', 'dead'):
-                        (all_sprites, water_pools, lava_pools,
-                         buttons_group, levers_group,
-                         door_fire, door_water, btn_red, btn_blue,
-                         fireboy, watergirl,
-                         gems_group, total_gems) = reset()
-                        game_state     = 'playing'
-                        tick           = 0
-                        elapsed_frames = 0
-                        gems_collected = 0
-                        grade          = 'C'
+                    state = LEVEL_SELECT
+
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if game_state in ('win', 'dead'):
+                    btn_nov, btn_men = overlay_btns
+                    if btn_nov and btn_nov.collidepoint(mx, my):
+                        do_reset()
+                    elif btn_men and btn_men.collidepoint(mx, my):
+                        state = LEVEL_SELECT
 
             if game_state == 'playing':
                 fireboy.handle_event(event)
                 watergirl.handle_event(event)
 
-        if state == INIT:
+        if state == LEVEL_SELECT:
             break
 
         if game_state == 'playing':
@@ -377,12 +717,16 @@ def game_screen(window):
                         [btn_red,  btn_blue],
                         [door_water, door_fire],
                         font_hud)
-        draw_hud(window, font_hud, elapsed_frames, gems_collected, total_gems)
+        draw_hud(window, font_hud, font_timer, elapsed_frames, gems_collected, total_gems)
 
         if game_state == 'win':
-            draw_win_screen(window, font_big, font_small, tick, grade, elapsed_frames)
+            overlay_btns = draw_win_screen(
+                window, font_big, font_small, tick, mx, my, grade, elapsed_frames)
         elif game_state == 'dead':
-            draw_gameover_screen(window, font_big, font_small, dead_who)
+            overlay_btns = draw_gameover_screen(
+                window, font_big, font_small, dead_who, mx, my)
+        else:
+            overlay_btns = (None, None)
 
         pygame.display.flip()
 
