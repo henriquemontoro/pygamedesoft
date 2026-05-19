@@ -9,28 +9,8 @@ GROUND_Y = HEIGHT - 40   # y do topo do chão
 COR_CHAO = (75, 50, 22)
 COR_PLAT = (115, 78, 38)
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Layout do nível
-#
-#  [F-Door]                          [W-Door]
-#  [L3: 0-180, y=260]      [R3: 620-800, y=260]
-#
-#  [L2: 0-180]  [Bridge→]  [M: 380-600] [R2: 600-800]  y=360
-#  [Lever on L2]           [BtnW][BtnF]
-#
-#  [L1: 0-180]                         [R1: 620-800]  y=460
-#
-#  [Gnd-L]  [Water 190-390]  [Gnd-M]  [Lava 410-610]  [Gnd-R]   y=560
-#
-# Puzzle: Fireboy toca a alavanca → ponte desliza → ambos vão para M →
-#  Fireboy pisa no botão vermelho (abre porta da Watergirl),
-#  Watergirl pisa no botão azul (abre porta do Fireboy).
-#  Temporizador de 6s: após soltar o botão o portal ainda fica aberto 6s.
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+#Obtido com ajuda de IAg - pré-renderiza o fundo de floresta uma única vez
 def make_forest_bg():
-    """Pré-renderiza o fundo de floresta uma única vez."""
     bg = pygame.Surface((WIDTH, HEIGHT))
 
     sky_top = (110, 190, 255)
@@ -75,7 +55,7 @@ def make_forest_bg():
     pygame.draw.rect(bg, (62, 95, 38), (0, GROUND_Y - 6, WIDTH, 6))
     return bg
 
-
+#Obtido com ajuda de IAg
 def make_cave_bg():
     """Pré-renderiza o fundo de caverna."""
     bg = pygame.Surface((WIDTH, HEIGHT))
@@ -123,7 +103,7 @@ def make_cave_bg():
     pygame.draw.rect(bg, (35, 28, 55), (0, GROUND_Y - 6, WIDTH, 6))
     return bg
 
-
+#Obtido com ajuda de IAg
 def make_volcano_bg():
     """Pré-renderiza o fundo de vulcão."""
     bg = pygame.Surface((WIDTH, HEIGHT))
@@ -161,7 +141,7 @@ def make_volcano_bg():
     pygame.draw.rect(bg, (70, 25, 10), (0, GROUND_Y - 6, WIDTH, 6))
     return bg
 
-
+#Extraído com ajuda de IAg
 def draw_timer_bars(window, buttons, doors, font):
     """Desenha barra de contagem regressiva acima de cada porta aberta."""
     for btn, door in zip(buttons, doors):
@@ -216,7 +196,7 @@ def _draw_overlay_btn(window, text, cx, cy, font, mx, my, w=220, h=46):
     window.blit(surf, surf.get_rect(center=rect.center))
     return rect
 
-
+#Extraído com ajuda de IAg
 def draw_win_screen(window, font_big, font_small, tick, mx, my,
                     grade='C', elapsed_frames=0):
     """Retorna (btn_novamente, btn_menu)."""
@@ -248,7 +228,7 @@ def draw_win_screen(window, font_big, font_small, tick, mx, my,
         window, 'SELECIONAR FASE', WIDTH // 2 + 125, cy_btn, font_btn, mx, my, w=220, h=44)
     return btn_novamente, btn_menu
 
-
+#Extraído com ajuda de IAg
 def draw_gameover_screen(window, font_big, font_small, who_died, mx, my):
     """Retorna (btn_novamente, btn_menu)."""
     overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)

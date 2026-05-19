@@ -4,7 +4,7 @@ import pygame
 import math
 from config import *
 
-
+#Obtido com ajuda de IAg
 def level_screen(window):
     """Tela de seleção de fase. Retorna (state, level_num)."""
     clock  = pygame.time.Clock()
