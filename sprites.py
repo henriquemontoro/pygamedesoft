@@ -383,6 +383,61 @@ class GreenPool(pygame.sprite.Sprite):
             self._draw()
 
 
+class PushBlock(pygame.sprite.Sprite):
+    """Caixa de madeira empurrável. Jogadores podem empurrá-la para alcançar lugares mais altos."""
+    SIZE = 36
+
+    def __init__(self, x, y, platforms):
+        super().__init__()
+        s = self.SIZE
+        self.image = pygame.Surface((s, s))
+        self.image.fill((139, 90, 43))
+        pygame.draw.rect(self.image, (90, 58, 18), (0, 0, s, s), 3)
+        for gx in [s // 3, 2 * s // 3]:
+            pygame.draw.line(self.image, (108, 68, 26), (gx, 3), (gx, s - 3), 1)
+        pygame.draw.line(self.image, (108, 68, 26), (3, s // 2), (s - 3, s // 2), 1)
+        pygame.draw.line(self.image, (185, 135, 75), (2, 2), (s - 3, 2), 1)
+        pygame.draw.line(self.image, (185, 135, 75), (2, 2), (2, s - 3), 1)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.vel_y = 0
+        self.on_ground = False
+        self.dx = 0
+        self._platforms = platforms
+
+    def update(self):
+        self.vel_y = min(self.vel_y + GRAVIDADE, 15)
+        dy = int(self.vel_y)
+        if self.vel_y > 0 and dy == 0:
+            dy = 1
+        self.rect.y += dy
+        self.on_ground = False
+        for hit in pygame.sprite.spritecollide(self, self._platforms, False):
+            if hit is self:
+                continue
+            if self.vel_y >= 0:
+                self.rect.bottom = hit.rect.top
+                self.vel_y = 0
+                self.on_ground = True
+
+    def try_push(self, dx):
+        self.rect.x += dx
+        if self.rect.left < 0:
+            self.rect.left = 0
+            return
+        if self.rect.right > WIDTH:
+            self.rect.right = WIDTH
+            return
+        for hit in pygame.sprite.spritecollide(self, self._platforms, False):
+            if hit is self:
+                continue
+            if dx > 0:
+                self.rect.right = hit.rect.left
+            else:
+                self.rect.left = hit.rect.right
+
+
 class Door(pygame.sprite.Sprite):
 
     DOOR_WIDTH  = 40
