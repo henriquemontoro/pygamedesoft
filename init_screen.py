@@ -3,9 +3,11 @@
 import pygame
 import math
 from config import *
+from sounds import play_music, play_sfx
 
 
 def _draw_btn_rect(window, text, rect, font, mx, my):
+    """Desenha um botão retangular com destaque ao passar o mouse."""
     hov  = rect.collidepoint(mx, my)
     bg   = (70, 65, 105) if hov else (40, 36, 65)
     bord = (230, 220, 255) if hov else (140, 130, 180)
@@ -16,6 +18,8 @@ def _draw_btn_rect(window, text, rect, font, mx, my):
 
 
 def init_screen(window):
+    """Exibe a tela inicial com título, controles e botões Jogar/Sair. Retorna o próximo estado."""
+    play_music('menu')
     clock   = pygame.time.Clock()
     state   = INIT
     tick    = 0
@@ -39,8 +43,10 @@ def init_screen(window):
                 state = QUIT
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if btn_jogar.collidepoint(mx, my):
+                    play_sfx('click')
                     state = LEVEL_SELECT
                 if btn_sair.collidepoint(mx, my):
+                    play_sfx('click')
                     state = QUIT
 
         # ── Fundo gradiente escuro ─────────────────────────────────────

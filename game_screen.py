@@ -4,6 +4,7 @@ import pygame
 import math
 from config import *
 from sprites import *
+from sounds import play_music, play_sfx, pause_music, resume_music, stop_music
 
 GROUND_Y = HEIGHT - 40   # y do topo do chão
 COR_CHAO = (75, 50, 22)
@@ -11,6 +12,7 @@ COR_PLAT = (115, 78, 38)
 
 #Obtido com ajuda de IAg - pré-renderiza o fundo de floresta uma única vez
 def make_forest_bg():
+    """Pré-renderiza o fundo de floresta com céu gradiente, nuvens, colinas e árvores."""
     bg = pygame.Surface((WIDTH, HEIGHT))
 
     sky_top = (110, 190, 255)
@@ -166,6 +168,7 @@ def draw_timer_bars(window, buttons, doors, font):
 
 
 def draw_hud(window, font, font_timer, elapsed_frames=0, gems_collected=0, total_gems=0):
+    """Desenha controles, cronômetro, contador de gemas e dica na tela de jogo."""
     ctrl = font.render(
         'Fireboy: WASD  |  Watergirl: Setas', True, (220, 220, 220))
     window.blit(ctrl, (10, 10))
@@ -186,6 +189,7 @@ def draw_hud(window, font, font_timer, elapsed_frames=0, gems_collected=0, total
 
 
 def _draw_overlay_btn(window, text, cx, cy, font, mx, my, w=220, h=46):
+    """Desenha botão centralizado em (cx, cy) com destaque ao passar o mouse. Retorna o Rect."""
     rect = pygame.Rect(cx - w // 2, cy - h // 2, w, h)
     hov  = rect.collidepoint(mx, my)
     bg   = (80, 75, 110) if hov else (45, 42, 70)
@@ -197,7 +201,7 @@ def _draw_overlay_btn(window, text, cx, cy, font, mx, my, w=220, h=46):
     return rect
 
 #Extraído com ajuda de IAg
-def draw_win_screen(window, font_big, font_small, tick, mx, my,
+def draw_win_screen(window, font_big, font_small, font_btn, tick, mx, my,
                     grade='C', elapsed_frames=0):
     """Retorna (btn_novamente, btn_menu)."""
     overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
@@ -221,7 +225,6 @@ def draw_win_screen(window, font_big, font_small, tick, mx, my,
     window.blit(time_txt, time_txt.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 28)))
 
     cy_btn = HEIGHT // 2 + 80
-    font_btn = pygame.font.SysFont(None, 30)
     btn_novamente = _draw_overlay_btn(
         window, 'JOGAR NOVAMENTE', WIDTH // 2 - 125, cy_btn, font_btn, mx, my, w=220, h=44)
     btn_menu = _draw_overlay_btn(
@@ -229,7 +232,7 @@ def draw_win_screen(window, font_big, font_small, tick, mx, my,
     return btn_novamente, btn_menu
 
 #Extraído com ajuda de IAg
-def draw_gameover_screen(window, font_big, font_small, who_died, mx, my):
+def draw_gameover_screen(window, font_big, font_small, font_btn, who_died, mx, my):
     """Retorna (btn_novamente, btn_menu)."""
     overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
     overlay.fill((0, 0, 0, 170))
@@ -238,7 +241,6 @@ def draw_gameover_screen(window, font_big, font_small, who_died, mx, my):
     txt = font_big.render(f'{who_died} morreu!', True, VERMELHO)
     window.blit(txt, txt.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 55)))
 
-    font_btn = pygame.font.SysFont(None, 30)
     cy_btn = HEIGHT // 2 + 20
     btn_novamente = _draw_overlay_btn(
         window, 'TENTAR NOVAMENTE', WIDTH // 2 - 125, cy_btn, font_btn, mx, my, w=230, h=44)
@@ -248,6 +250,7 @@ def draw_gameover_screen(window, font_big, font_small, who_died, mx, my):
 
 
 def build_level():
+    """Constrói a Fase 1 (Floresta) com plataformas, poças, botões, alavanca e portas."""
     all_sprites   = pygame.sprite.Group()
     platforms     = pygame.sprite.Group()
     water_pools   = pygame.sprite.Group()
@@ -258,19 +261,23 @@ def build_level():
     push_blocks   = pygame.sprite.Group()
 
     def add_plat(x, y, w, color=COR_PLAT):
+        """Cria e registra uma plataforma nos grupos de sprites."""
         p = Platform(x, y, w, color)
         platforms.add(p); all_sprites.add(p)
         return p
 
     def add_water(x, y, w):
+        """Cria e registra uma poça de água nos grupos de sprites."""
         p = WaterPool(x, y, w)
         water_pools.add(p); all_sprites.add(p)
 
     def add_lava(x, y, w):
+        """Cria e registra uma poça de lava nos grupos de sprites."""
         p = LavaPool(x, y, w)
         lava_pools.add(p); all_sprites.add(p)
 
     def add_gem(x, y, color=(255, 215, 50)):
+        """Cria e registra uma gema coletável nos grupos de sprites."""
         g = Gem(x, y, color)
         gems_group.add(g); all_sprites.add(g)
 
@@ -329,8 +336,9 @@ def build_level():
     add_gem(720, 248)
 
     # ── Portas de saída ──────────────────────────────────────────────────
-    door_fire  = Door(x=20,  y=205, color=(200, 60, 60), label='F')
-    door_water = Door(x=745, y=205, color=(60, 60, 200), label='W')
+    # Portas invertidas: Watergirl à esquerda, Fireboy à direita
+    door_water = Door(x=20,  y=205, color=(60, 60, 200), label='W')
+    door_fire  = Door(x=745, y=205, color=(200, 60, 60), label='F')
     all_sprites.add(door_fire, door_water)
 
     # ── Botões na plataforma M ───────────────────────────────────────────
@@ -371,20 +379,25 @@ def build_level_2():
     COR_DARK = (35, 28, 55)
 
     def add_plat(x, y, w, color=COR_CAVE):
+        """Cria e registra uma plataforma nos grupos de sprites."""
         p = Platform(x, y, w, color)
         platforms.add(p); all_sprites.add(p); return p
 
     def add_water(x, y, w):
+        """Cria e registra uma poça de água nos grupos de sprites."""
         p = WaterPool(x, y, w); water_pools.add(p); all_sprites.add(p)
 
     def add_lava(x, y, w):
+        """Cria e registra uma poça de lava nos grupos de sprites."""
         p = LavaPool(x, y, w); lava_pools.add(p); all_sprites.add(p)
 
     def add_green(x, y, w):
+        """Cria e registra uma poça de ácido verde (mata ambos) nos grupos de sprites."""
         p = GreenPool(x, y, w)
         water_pools.add(p); lava_pools.add(p); all_sprites.add(p)
 
     def add_gem(x, y, color=(140, 220, 255)):
+        """Cria e registra uma gema coletável nos grupos de sprites."""
         g = Gem(x, y, color); gems_group.add(g); all_sprites.add(g)
 
     PH = POOL_HEIGHT
@@ -466,20 +479,25 @@ def build_level_3():
     COR_DARK = (65, 22, 8)
 
     def add_plat(x, y, w, color=COR_VOLC):
+        """Cria e registra uma plataforma nos grupos de sprites."""
         p = Platform(x, y, w, color)
         platforms.add(p); all_sprites.add(p); return p
 
     def add_water(x, y, w):
+        """Cria e registra uma poça de água nos grupos de sprites."""
         p = WaterPool(x, y, w); water_pools.add(p); all_sprites.add(p)
 
     def add_lava(x, y, w):
+        """Cria e registra uma poça de lava nos grupos de sprites."""
         p = LavaPool(x, y, w); lava_pools.add(p); all_sprites.add(p)
 
     def add_green(x, y, w):
+        """Cria e registra uma poça de ácido verde (mata ambos) nos grupos de sprites."""
         p = GreenPool(x, y, w)
         water_pools.add(p); lava_pools.add(p); all_sprites.add(p)
 
     def add_gem(x, y, color=(255, 160, 50)):
+        """Cria e registra uma gema coletável nos grupos de sprites."""
         g = Gem(x, y, color); gems_group.add(g); all_sprites.add(g)
 
     PH = POOL_HEIGHT
@@ -569,17 +587,22 @@ _LEVEL_BUILDERS = {
 
 
 def game_screen(window, level=1):
+    """Executa o loop principal da fase indicada. Retorna (próximo_estado, vitória_booleano)."""
+    play_music('game')
     clock = pygame.time.Clock()
 
     font_big   = pygame.font.SysFont(None, 64)
     font_small = pygame.font.SysFont(None, 28)
     font_hud   = pygame.font.SysFont(None, 22)
     font_timer = pygame.font.SysFont(None, 48)
+    font_pause = pygame.font.SysFont(None, 52)   # pré-criada, usada em draw_pause
+    font_btn   = pygame.font.SysFont(None, 30)   # pré-criada, usada nos overlays
 
     build_fn, bg_fn = _LEVEL_BUILDERS.get(level, _LEVEL_BUILDERS[1])
     bg = bg_fn()
 
     def reset():
+        """Reconstrói todos os sprites e jogadores para o início da fase."""
         (all_sprites, platforms, water_pools, lava_pools,
          buttons_group, levers_group,
          door_fire, door_water, btn_red, btn_blue,
@@ -614,22 +637,58 @@ def game_screen(window, level=1):
     elapsed_frames = 0
     gems_collected = 0
     grade          = 'C'
-    overlay_btns   = (None, None)   # (btn_novamente, btn_menu)
+    level_won      = False
+    overlay_btns   = (None, None)
     particles      = []
 
     def spawn_particles(cx, cy, color):
+        """Gera partículas de explosão em três camadas: flash, estilhaços e faíscas."""
         import random, math as _m
-        for _ in range(22):
+
+        bright = tuple(min(255, c + 120) for c in color)  # versão clara para o flash
+        white  = (255, 255, 255)
+
+        # 1 — Flash central: partículas rápidas e brilhantes
+        for _ in range(20):
             ang   = random.uniform(0, 2 * _m.pi)
-            speed = random.uniform(1.5, 5.0)
-            life  = random.randint(18, 32)
+            speed = random.uniform(4.0, 10.0)
+            life  = random.randint(6, 14)
+            c     = random.choice([white, bright, bright])
             particles.append({
-                'x': cx, 'y': cy,
+                'x': float(cx), 'y': float(cy),
                 'vx': _m.cos(ang) * speed,
-                'vy': _m.sin(ang) * speed - 2.5,
+                'vy': _m.sin(ang) * speed - 4.0,
                 'life': life, 'max_life': life,
-                'color': color,
-                'r': random.randint(3, 7),
+                'color': c, 'r': random.randint(5, 11),
+            })
+
+        # 2 — Estilhaços: partículas médias na cor do personagem
+        for _ in range(30):
+            ang   = random.uniform(0, 2 * _m.pi)
+            speed = random.uniform(2.0, 7.0)
+            life  = random.randint(18, 36)
+            particles.append({
+                'x': float(cx), 'y': float(cy),
+                'vx': _m.cos(ang) * speed,
+                'vy': _m.sin(ang) * speed - 3.0,
+                'life': life, 'max_life': life,
+                'color': random.choice([color, bright]),
+                'r': random.randint(3, 8),
+            })
+
+        # 3 — Faíscas: detritos menores com mais gravidade
+        for _ in range(20):
+            ang   = random.uniform(-_m.pi, 0)   # só para cima
+            speed = random.uniform(1.5, 5.5)
+            life  = random.randint(22, 45)
+            ox    = random.randint(-14, 14)
+            oy    = random.randint(-14, 14)
+            particles.append({
+                'x': float(cx + ox), 'y': float(cy + oy),
+                'vx': _m.cos(ang) * speed,
+                'vy': _m.sin(ang) * speed,
+                'life': life, 'max_life': life,
+                'color': color, 'r': random.randint(2, 5),
             })
 
     # Botões da tela de pausa — rects fixos
@@ -637,12 +696,12 @@ def game_screen(window, level=1):
     btn_sair_menu = pygame.Rect(WIDTH // 2 - 100, HEIGHT // 2 + 64,  200, 44)
 
     def draw_pause(mx, my):
+        """Desenha o overlay de pausa com botões Continuar e Ir para o menu."""
         dim = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         dim.fill((0, 0, 0, 140))
         window.blit(dim, (0, 0))
 
-        font_p = pygame.font.SysFont(None, 52)
-        txt = font_p.render('PAUSADO', True, BRANCO)
+        txt = font_pause.render('PAUSADO', True, BRANCO)
         window.blit(txt, txt.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 40)))
 
         for rect, label in [(btn_continuar, 'Continuar'),
@@ -656,6 +715,7 @@ def game_screen(window, level=1):
             window.blit(lbl, lbl.get_rect(center=rect.center))
 
     def do_reset():
+        """Reinicia a fase zerando contadores, partículas e recriando os sprites."""
         nonlocal game_state, tick, elapsed_frames, gems_collected, grade
         nonlocal all_sprites, water_pools, lava_pools, buttons_group, levers_group
         nonlocal door_fire, door_water, btn_red, btn_blue, fireboy, watergirl
@@ -671,6 +731,7 @@ def game_screen(window, level=1):
         gems_collected = 0
         grade          = 'C'
         particles.clear()
+        play_music('game')   # retoma a música da fase ao reiniciar
 
     while state != QUIT:
         clock.tick(FPS)
@@ -685,18 +746,27 @@ def game_screen(window, level=1):
                 if event.key == pygame.K_ESCAPE:
                     if game_state == 'playing':
                         paused = not paused
+                        if paused:
+                            pause_music()
+                        else:
+                            resume_music()
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if paused:
                     if btn_continuar.collidepoint(mx, my):
+                        play_sfx('click')
                         paused = False
+                        resume_music()
                     elif btn_sair_menu.collidepoint(mx, my):
+                        play_sfx('click')
                         state = LEVEL_SELECT
                 elif game_state in ('win', 'dead'):
                     btn_nov, btn_men = overlay_btns
                     if btn_nov and btn_nov.collidepoint(mx, my):
+                        play_sfx('click')
                         do_reset()
                     elif btn_men and btn_men.collidepoint(mx, my):
+                        play_sfx('click')
                         state = LEVEL_SELECT
 
             if game_state == 'playing' and not paused:
@@ -710,19 +780,29 @@ def game_screen(window, level=1):
             elapsed_frames += 1
             all_sprites.update()
 
-            # Alavancas verificam contato com jogadores
+            # Alavancas — som ao acionar
             for lev in levers_group:
+                prev = lev.active
                 lev.check_contact([fireboy, watergirl])
+                if lev.active != prev:
+                    play_sfx('lever')
 
-            # Botões atualizam temporizador e portais
+            # Botões — som ao abrir porta
+            doors_before = {d: d.open for d in [door_fire, door_water]}
             for btn in buttons_group:
                 btn.check_press([fireboy, watergirl])
+            for door, was_open in doors_before.items():
+                if not was_open and door.open:
+                    play_sfx('door')
 
-            # Coleta de gemas
+            # Coleta de gemas — som ao coletar
             before = len(gems_group)
             pygame.sprite.spritecollide(fireboy,   gems_group, True)
             pygame.sprite.spritecollide(watergirl, gems_group, True)
-            gems_collected += before - len(gems_group)
+            coletadas = before - len(gems_group)
+            gems_collected += coletadas
+            if coletadas > 0:
+                play_sfx('gem')
 
             # Caixas empurráveis
             for block in push_blocks:
@@ -741,16 +821,22 @@ def game_screen(window, level=1):
                 game_state = 'dead'
                 dead_who   = 'Fireboy'
                 spawn_particles(fireboy.rect.centerx, fireboy.rect.centery, (220, 60, 60))
+                fireboy.kill()   # sprite some — a explosão toma o lugar
+                stop_music()
+                play_sfx('death')
             if watergirl.on_ground and pygame.sprite.spritecollide(watergirl, lava_pools, False):
                 game_state = 'dead'
                 dead_who   = 'Watergirl'
                 spawn_particles(watergirl.rect.centerx, watergirl.rect.centery, (60, 60, 220))
+                watergirl.kill()
+                stop_music()
+                play_sfx('death')
 
-            # Vitória: ambos dentro das suas portas abertas
-            fb_in = door_fire.open  and fireboy.rect.colliderect(door_fire.rect)
-            wg_in = door_water.open and watergirl.rect.colliderect(door_water.rect)
+            # Vitória: ambos completamente dentro das suas portas abertas
+            fb_in = door_fire.open  and door_fire.rect.inflate(4, 4).contains(fireboy.rect)
+            wg_in = door_water.open and door_water.rect.inflate(4, 4).contains(watergirl.rect)
             if fb_in and wg_in:
-                time_ok  = elapsed_frames < 20 * FPS   # menos de 20 segundos
+                time_ok  = elapsed_frames < 20 * FPS
                 all_gems = gems_collected >= total_gems
                 if time_ok and all_gems:
                     grade = 'A'
@@ -759,6 +845,8 @@ def game_screen(window, level=1):
                 else:
                     grade = 'C'
                 game_state = 'win'
+                level_won  = True
+                play_music('win', loops=0)   # fanfarra toca uma vez
 
         # ── Partículas ────────────────────────────────────────────────
         for p in particles[:]:
@@ -788,13 +876,13 @@ def game_screen(window, level=1):
             draw_pause(mx, my)
         elif game_state == 'win':
             overlay_btns = draw_win_screen(
-                window, font_big, font_small, tick, mx, my, grade, elapsed_frames)
+                window, font_big, font_small, font_btn, tick, mx, my, grade, elapsed_frames)
         elif game_state == 'dead':
             overlay_btns = draw_gameover_screen(
-                window, font_big, font_small, dead_who, mx, my)
+                window, font_big, font_small, font_btn, dead_who, mx, my)
         else:
             overlay_btns = (None, None)
 
         pygame.display.flip()
 
-    return state
+    return state, level_won

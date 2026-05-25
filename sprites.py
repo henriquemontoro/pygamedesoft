@@ -83,8 +83,10 @@ def draw_player_sprite(surface, color, player_type):
 
 
 class Player(pygame.sprite.Sprite):
+    """Sprite de jogador com física de plataformas, movimentação e detecção de colisão."""
 
     def __init__(self, platforms, x, y, color, controls, player_type='boy'):
+        """Inicializa o jogador com posição, cor, controles e tipo ('boy' ou 'girl')."""
         pygame.sprite.Sprite.__init__(self)
 
         self.color      = color
@@ -103,6 +105,7 @@ class Player(pygame.sprite.Sprite):
         self._prev_jump = False
 
     def update(self):
+        """Atualiza movimento, física de pulo e colisão com plataformas a cada frame."""
         keys = pygame.key.get_pressed()
 
         # Movimento horizontal — resposta imediata frame a frame
@@ -154,12 +157,15 @@ class Player(pygame.sprite.Sprite):
             self.rect.y = -PLAYER_HEIGHT
 
     def handle_event(self, event):
+        """Stub de evento; entrada resolvida em update() via get_pressed()."""
         pass  # tudo resolvido via get_pressed() em update()
 
 
 class Platform(pygame.sprite.Sprite):
+    """Plataforma estática sobre a qual os jogadores podem pousar."""
 
     def __init__(self, x, y, width, color=CINZA):
+        """Cria a plataforma com textura de grão e borda iluminada no topo."""
         pygame.sprite.Sprite.__init__(self)
 
         self.image = pygame.Surface((width, PLATFORM_HEIGHT))
@@ -179,6 +185,7 @@ class MovingPlatform(Platform):
     """Plataforma que oscila horizontalmente ou verticalmente entre dois pontos."""
 
     def __init__(self, x, y, width, *, end_x=None, end_y=None, speed=2, color=CINZA):
+        """Inicializa a plataforma móvel entre (x,y) e (end_x, end_y) com a velocidade dada."""
         super().__init__(x, y, width, color)
         self.start_x = x
         self.start_y = y
@@ -189,6 +196,7 @@ class MovingPlatform(Platform):
         self.dx      = 0   # deslocamento horizontal neste frame (para arrastar o player)
 
     def update(self):
+        """Move a plataforma entre os pontos inicial e final, invertendo direção nos extremos."""
         old_x = self.rect.x
 
         if self.end_x != self.start_x:
@@ -213,6 +221,7 @@ class Bridge(Platform):
     SPEED = 12
 
     def __init__(self, x_closed, x_open, y, width):
+        """Define posições fechada e aberta da ponte e desenha setas indicativas."""
         color = (145, 95, 42)
         super().__init__(x_closed, y, width, color)
         # Desenha setas na ponte para indicar que é especial
@@ -226,9 +235,11 @@ class Bridge(Platform):
         self._target_x = x_closed
 
     def activate(self, state):
+        """Define o destino horizontal da ponte conforme o estado da alavanca."""
         self._target_x = self.x_open if state else self.x_closed
 
     def update(self):
+        """Desliza a ponte horizontalmente em direção ao alvo a cada frame."""
         if self.rect.x < self._target_x:
             self.rect.x = min(self.rect.x + self.SPEED, self._target_x)
         elif self.rect.x > self._target_x:
@@ -241,6 +252,7 @@ class VerticalBridge(Platform):
     SPEED = 8
 
     def __init__(self, x, y_closed, y_open, width):
+        """Define posições fechada e aberta verticais e desenha linhas e setas na ponte."""
         color = (130, 85, 35)
         super().__init__(x, y_closed, width, color)
         # Linhas horizontais indicam movimento vertical
@@ -255,9 +267,11 @@ class VerticalBridge(Platform):
         self._target_y = y_closed
 
     def activate(self, state):
+        """Define o destino vertical da ponte conforme o estado da alavanca."""
         self._target_y = self.y_open if state else self.y_closed
 
     def update(self):
+        """Desliza a ponte verticalmente em direção ao alvo a cada frame."""
         if self.rect.y < self._target_y:
             self.rect.y = min(self.rect.y + self.SPEED, self._target_y)
         elif self.rect.y > self._target_y:
@@ -265,8 +279,10 @@ class VerticalBridge(Platform):
 
 
 class WaterPool(pygame.sprite.Sprite):
+    """Poça de água animada. Fatal para o Fireboy."""
 
     def __init__(self, x, y, width):
+        """Cria a poça de água na posição (x, y) com a largura especificada."""
         pygame.sprite.Sprite.__init__(self)
         self._width = width
         self._tick  = 0
@@ -277,6 +293,7 @@ class WaterPool(pygame.sprite.Sprite):
         self.rect.y = y
 
     def _draw(self):
+        """Redesenha a superfície com gradiente, ondas e brilhos animados."""
         w, h = self._width, POOL_HEIGHT
         surf = self.image
         # Gradiente azul-profundo
@@ -299,14 +316,17 @@ class WaterPool(pygame.sprite.Sprite):
         pygame.draw.line(surf, (200, 245, 255), (0, 0), (w, 0), 1)
 
     def update(self):
+        """Avança o contador de animação e redesenha a poça a cada 3 frames."""
         self._tick += 1
         if self._tick % 3 == 0:
             self._draw()
 
 
 class LavaPool(pygame.sprite.Sprite):
+    """Poça de lava animada. Fatal para a Watergirl."""
 
     def __init__(self, x, y, width):
+        """Cria a poça de lava na posição (x, y) com a largura especificada."""
         pygame.sprite.Sprite.__init__(self)
         self._width = width
         self._tick  = 0
@@ -317,6 +337,7 @@ class LavaPool(pygame.sprite.Sprite):
         self.rect.y = y
 
     def _draw(self):
+        """Redesenha a superfície com gradiente laranja-vermelho, ondas e bolhas."""
         w, h = self._width, POOL_HEIGHT
         surf = self.image
         # Gradiente laranja-vermelho
@@ -340,6 +361,7 @@ class LavaPool(pygame.sprite.Sprite):
         pygame.draw.line(surf, (255, 220, 60), (0, 0), (w, 0), 2)
 
     def update(self):
+        """Avança o contador de animação e redesenha a lava a cada 3 frames."""
         self._tick += 1
         if self._tick % 3 == 0:
             self._draw()
@@ -349,6 +371,7 @@ class GreenPool(pygame.sprite.Sprite):
     """Piscina de ácido verde — mata AMBOS os jogadores."""
 
     def __init__(self, x, y, width):
+        """Cria a poça de ácido verde na posição (x, y) com a largura especificada."""
         pygame.sprite.Sprite.__init__(self)
         self._width = width
         self._tick  = 0
@@ -359,6 +382,7 @@ class GreenPool(pygame.sprite.Sprite):
         self.rect.y = y
 
     def _draw(self):
+        """Redesenha a superfície com gradiente verde, ondas e bolhas animadas."""
         w, h = self._width, POOL_HEIGHT
         surf = self.image
         for y in range(h):
@@ -378,6 +402,7 @@ class GreenPool(pygame.sprite.Sprite):
         pygame.draw.line(surf, (130, 255, 100), (0, 0), (w, 0), 2)
 
     def update(self):
+        """Avança o contador de animação e redesenha o ácido a cada 3 frames."""
         self._tick += 1
         if self._tick % 3 == 0:
             self._draw()
@@ -388,6 +413,7 @@ class PushBlock(pygame.sprite.Sprite):
     SIZE = 36
 
     def __init__(self, x, y, platforms):
+        """Cria a caixa empurrável com textura de madeira e sujeita à gravidade."""
         super().__init__()
         s = self.SIZE
         self.image = pygame.Surface((s, s))
@@ -407,6 +433,7 @@ class PushBlock(pygame.sprite.Sprite):
         self._platforms = platforms
 
     def update(self):
+        """Aplica gravidade à caixa e resolve colisão com plataformas abaixo."""
         self.vel_y = min(self.vel_y + GRAVIDADE, 15)
         dy = int(self.vel_y)
         if self.vel_y > 0 and dy == 0:
@@ -422,6 +449,7 @@ class PushBlock(pygame.sprite.Sprite):
                 self.on_ground = True
 
     def try_push(self, dx):
+        """Tenta mover a caixa horizontalmente dx pixels, parando em paredes ou bordas."""
         self.rect.x += dx
         if self.rect.left < 0:
             self.rect.left = 0
@@ -439,11 +467,13 @@ class PushBlock(pygame.sprite.Sprite):
 
 
 class Door(pygame.sprite.Sprite):
+    """Porta de saída de fase. Fica aberta somente quando o botão correspondente é pressionado."""
 
     DOOR_WIDTH  = 40
     DOOR_HEIGHT = 60
 
     def __init__(self, x, y, color, label):
+        """Cria a porta na posição (x, y) com a cor e rótulo indicados."""
         pygame.sprite.Sprite.__init__(self)
         self.color  = color
         self.label  = label
@@ -455,6 +485,7 @@ class Door(pygame.sprite.Sprite):
         self.rect.y = y
 
     def _draw(self):
+        """Redesenha a porta com visual diferente para estado aberto e fechado."""
         self.image.fill((0, 0, 0, 0))
         frame = tuple(min(255, c + 30) for c in self.color)
         if self.open:
@@ -475,6 +506,7 @@ class Door(pygame.sprite.Sprite):
         self.image.blit(txt, (self.DOOR_WIDTH // 2 - txt.get_width() // 2, 4))
 
     def set_open(self, state):
+        """Abre ou fecha a porta e redesenha o sprite se o estado mudou."""
         if self.open != state:
             self.open = state
             self._draw()
@@ -487,6 +519,7 @@ class Button(pygame.sprite.Sprite):
     BTN_HEIGHT = 16
 
     def __init__(self, x, y, color, linked_doors):
+        """Cria o botão na posição (x, y) vinculado às portas informadas."""
         pygame.sprite.Sprite.__init__(self)
         self.color        = color
         self.linked_doors = linked_doors
@@ -500,6 +533,7 @@ class Button(pygame.sprite.Sprite):
         self.rect.y       = y
 
     def _draw(self):
+        """Redesenha o botão com altura reduzida quando pressionado."""
         self.image.fill((0, 0, 0, 0))
         h = self.BTN_HEIGHT // 2 if self._phys else self.BTN_HEIGHT
         pygame.draw.rect(self.image, CINZA_ESCURO,
@@ -517,6 +551,7 @@ class Button(pygame.sprite.Sprite):
         return self._timer / CLOSE_DELAY if self._timer > 0 else 0.0
 
     def check_press(self, players):
+        """Verifica se algum jogador está sobre o botão e atualiza o temporizador e as portas."""
         prev_phys = self._phys
         self._phys = any(
             player.rect.bottom >= self.rect.top and
@@ -547,6 +582,7 @@ class Lever(pygame.sprite.Sprite):
     W, H = 26, 42
 
     def __init__(self, x, y, linked_objects):
+        """Cria a alavanca na posição (x, y) vinculada aos objetos informados."""
         pygame.sprite.Sprite.__init__(self)
         self.linked       = linked_objects
         self.active       = False
@@ -558,6 +594,7 @@ class Lever(pygame.sprite.Sprite):
         self.rect.y       = y
 
     def _draw(self):
+        """Redesenha a alavanca com cor verde (ativo) ou vermelha (inativo)."""
         self.image.fill((0, 0, 0, 0))
         # Placa de fundo
         pygame.draw.rect(self.image, (60, 60, 60),
@@ -580,6 +617,7 @@ class Lever(pygame.sprite.Sprite):
         pygame.draw.circle(self.image, (180, 180, 180), (cx, self.H // 2), 4)
 
     def check_contact(self, players):
+        """Detecta contato dos jogadores e alterna o estado na borda de entrada."""
         in_contact = any(player.rect.colliderect(self.rect) for player in players)
         # Alterna apenas na borda de subida (entrada do contato)
         if in_contact and not self._prev_touch:
@@ -595,6 +633,7 @@ class Gem(pygame.sprite.Sprite):
     SIZE = 16
 
     def __init__(self, x, y, color=(255, 215, 50)):
+        """Cria a gema centralizada em (x, y) com a cor indicada."""
         pygame.sprite.Sprite.__init__(self)
         s = self.SIZE
         self.image = pygame.Surface((s, s), pygame.SRCALPHA)

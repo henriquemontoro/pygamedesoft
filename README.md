@@ -45,18 +45,27 @@ python jogo.py
 
 ## Vídeo de apresentação
 
-> 🔗 **[Link do vídeo — adicionar antes da entrega]**
+> (https://drive.google.com/file/d/1MLsoAk9xRf0vO1yMnJ80xenJ647hyWIH/view?usp=sharing)
 
 ## Estrutura do projeto
 
 ```
 pygamedesoft/
-├── jogo.py          # Ponto de entrada — máquina de estados principal
-├── config.py        # Constantes globais (dimensões, física, cores, estados)
-├── sprites.py       # Classes dos sprites (Player, Platform, Door, Button, Lever, pools…)
-├── init_screen.py   # Tela inicial
-├── level_screen.py  # Tela de seleção de fase
-└── game_screen.py   # Loop de jogo e construção das fases
+├── jogo.py           # Ponto de entrada — máquina de estados principal
+├── config.py         # Constantes globais (dimensões, física, cores, estados)
+├── sprites.py        # Todas as classes de sprites:
+│                     #   Player, Platform, MovingPlatform, Bridge, VerticalBridge,
+│                     #   WaterPool, LavaPool, GreenPool, PushBlock,
+│                     #   Door, Button, Lever, Gem
+├── sounds.py         # Sistema de áudio procedural (sem arquivos externos):
+│                     #   músicas de menu/jogo/vitória + SFX de clique,
+│                     #   morte, alavanca, porta e gema
+├── init_screen.py    # Tela inicial (título, controles, botões Jogar/Sair)
+├── level_screen.py   # Tela de seleção de fase (cards, cadeado, estrelas)
+└── game_screen.py    # Loop principal do jogo:
+                      #   build_level / build_level_2 / build_level_3,
+                      #   fundos procedurais, HUD, pausa, overlays de
+                      #   vitória e game over, sistema de partículas
 ```
 
 ## Alguns prompts gerados com auxílio de IAg
@@ -66,6 +75,7 @@ pygamedesoft/
 - Adicionar uma plataforma móvel horizontal na fase 2, e duas plataformas móveis na fase 3 (sendo uma vertical). Cronômetro mais centralizado, contador de gemas.
 - Adicionar um temporizador em cima das portas para elas não fecharem assim que um personagem tirar o "pé" de cima do botão de abertura da porta
 
+
 ## Funções extraídas 100% de IAg
 make_forest_bg()
 make_cave_bg()
@@ -73,4 +83,14 @@ make_volcano_bg()
 draw_timer_bars()
 draw_win_screen()
 draw_gameover_screen()
-
+build_level_2
+build_level_3
+_note
+_seq
+_to_sound
+_to_wav
+play_music
+stop_music
+pause_music
+Sistema de partículas de explosão na morte
+Correção de bugs
